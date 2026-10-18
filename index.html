@@ -236,6 +236,7 @@ function end(e){if(!D)return;var d=D;D=null;var want=d.nl>(d.min+d.max)/2;if(e.t
 m.addEventListener("pointerup",end);m.addEventListener("pointercancel",end)})();
 document.addEventListener("input",function(e){if(e.target.id==="fEmoji"||e.target.id==="mEmoji"){var v=one(e.target.value);if(v!==e.target.value)e.target.value=v}});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)render()});
+try{if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(function(){})}catch(e){}
 render();
 </script>
 </body>
