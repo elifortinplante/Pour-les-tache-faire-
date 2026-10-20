@@ -45,6 +45,12 @@ nav .round.on{opacity:1}
 .edit{border:0;background:none;font-size:1.4rem;cursor:pointer;padding:0 4px;color:var(--ink)}
 .h2s{margin:26px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--line);font-size:1.9rem;text-align:center;font-weight:600}
 .opt{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;border:2.5px solid var(--line);border-radius:999px;padding:20px;margin:0 0 16px;background:var(--card);color:var(--ink);font:inherit;font-size:1.5rem;cursor:pointer}
+.err{color:#d33;min-height:1.2em;font-size:1rem;margin:6px 0}
+.cmp{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:1.05rem}
+.cmp span{width:72px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar2{flex:1;height:12px;border:2px solid var(--line);border-radius:99px;overflow:hidden;background:var(--card)}
+.bar2 i{display:block;height:100%;background:var(--acc)}
+.cmp b{width:48px;text-align:right;font-weight:400}
 .sub{font-size:1.5rem;font-weight:600;text-decoration:underline;text-underline-offset:6px;margin:20px 4px 12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips button{font:inherit;font-size:1.05rem;padding:8px 14px;border:2.5px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer}
@@ -96,6 +102,7 @@ nav .round.on{opacity:1}
     <button class="round" id="navHw" aria-label="Devoirs">📚</button>
     <button class="round" id="navHab" aria-label="Habitudes">🏅</button>
     <button class="round" id="navAdd" aria-label="Ajouter">+</button>
+    <button class="round" id="navFr" aria-label="Amis">👥</button>
   </nav>
 </div>
 <div id="modal">
@@ -121,7 +128,7 @@ var EMO=["📚","🛏️","🪥","🍽️","💧","🏃","📖","🧹","🎵","�
 var SUBJ=["Science","Math","Histoire","Français","Anglais","CCQ"],mSubj="Science";
 var S={habits:[{id:"h2",t:"Faire son lit",days:ALL.slice(),plan:"flex",time:"",block:false,emoji:"🛏️",kind:"habit"}],once:{},onceHw:{},done:{},doneAt:{}};
 try{var raw=localStorage.getItem(KEY);if(raw){var p0=JSON.parse(raw);if(p0&&p0.habits)S=p0}}catch(e){}
-S.once=S.once||{};S.onceHw=S.onceHw||{};S.done=S.done||{};S.doneAt=S.doneAt||{};S.onceDone=S.onceDone||{};
+S.once=S.once||{};S.onceHw=S.onceHw||{};S.done=S.done||{};S.doneAt=S.doneAt||{};S.onceDone=S.onceDone||{};S.hist=S.hist||{};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 var DAYS=["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"],L=["D","L","M","M","J","V","S"];
 function ds(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -142,7 +149,7 @@ function tasks(kind){
 function one(s){s=(s||"").trim();if(!s)return"";var f;try{f=new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(s)[Symbol.iterator]().next().value.segment}catch(e){f=Array.from(s)[0]}return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(f)?f:""}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function toggle(id){
- if(view==="hw"){if(S.doneAt[id])delete S.doneAt[id];else S.doneAt[id]=Date.now();save();render();return}
+ if(view==="hw"){if(S.doneAt[id])delete S.doneAt[id];else S.doneAt[id]=Date.now();save();render();pushStats();return}
  if(findOnce(id)){if(S.onceDone[id])delete S.onceDone[id];else S.onceDone[id]=TD;save();render();return}
  var d=S.done[TD]=S.done[TD]||[],i=d.indexOf(id);if(i>-1)d.splice(i,1);else d.push(id);save();render()}
 function cleanup(){var t=Date.now(),gone=[];
@@ -159,7 +166,7 @@ function render(){
  cleanupOnce();cleanup();
  var m=document.getElementById("main"),h="",t=document.getElementById("title"),isT=view==="today"||view==="hw";
  document.getElementById("addToday").style.visibility=isT?"visible":"hidden";
- var on={navToday:view==="today",navHw:view==="hw",navHab:view==="habits",navAdd:view==="choice"||view==="subject"||view==="form"};
+ var on={navToday:view==="today",navHw:view==="hw",navHab:view==="habits",navAdd:view==="choice"||view==="subject"||view==="form",navFr:view==="friends"};
  for(var k in on)document.getElementById(k).className="round"+(on[k]?" on":"");
  if(isT){
   var kind=view==="hw"?"homework":"habit";
@@ -175,6 +182,8 @@ function render(){
   h+=hb.length?cards(hb):'<div class="empty" style="margin:10px 0">Aucune habitude.</div>';
   h+='<div class="h2s">Devoir</div>';
   h+=hws.length?cards(hws):'<div class="empty" style="margin:10px 0">Aucun devoir.</div>';
+ }else if(view==="friends"){
+  t.textContent="Amis";h+=friendsHtml();
  }else if(view==="choice"){
   t.textContent="Ajouter";
   h+='<button class="opt" data-choose="habit">🔁 Habitude</button><button class="opt" data-choose="homework">📚 Devoir</button>';
@@ -196,11 +205,13 @@ function render(){
   if(editId)h+='<button class="link" id="fDel">'+(hw?"Supprimer ce devoir":"Supprimer cette habitude")+'</button>';
  }
  m.innerHTML=h;
+ recordHist();
 }
 function readForm(){var n=document.getElementById("fName");if(n)F.t=n.value;var em=document.getElementById("fEmoji");if(em)F.emoji=one(em.value);var t=document.getElementById("fTime");if(t)F.time=t.value;var ps=document.querySelectorAll("#fPages input");if(ps.length)F.pages=Array.prototype.map.call(ps,function(i){return i.value})}
 function openForm(id,kind,subj){editId=id;var h=S.habits.filter(function(x){return x.id===id})[0],hw=kind==="homework";F=h?JSON.parse(JSON.stringify(h)):{t:"",emoji:defEmo(kind),kind:kind||"habit",subject:hw?(subj||SUBJ[0]):undefined,pages:hw?[""]:undefined,plan:"flex",time:"",block:false,days:hw?[WD]:ALL.slice()};F.kind=F.kind||"habit";F.emoji=F.emoji||defEmo(F.kind);if(F.kind==="homework"&&!F.subject)F.subject=SUBJ[0];if(F.kind==="homework"&&F.autoDel)F.days=[];if(F.kind==="homework"&&!(F.pages&&F.pages.length))F.pages=[""];view="form";render()}
 document.getElementById("main").addEventListener("click",function(e){
  var g=function(s){return e.target.closest(s)};var x;
+ if(view==="friends"){friendsClick(e);return}
  if(view==="today"||view==="hw"){if(x=g("[data-del]")){e.stopPropagation();delOnce(x.dataset.del)}return}
  if(view==="choice"){if(x=g("[data-choose]")){if(x.dataset.choose==="homework")go("subject");else openForm(null,"habit")}return}
  if(view==="subject"){if(x=g("[data-pick]"))openForm(null,"homework",x.dataset.pick);return}
@@ -226,6 +237,7 @@ document.getElementById("navToday").onclick=function(){go("today")};
 document.getElementById("navHw").onclick=function(){go("hw")};
 document.getElementById("navHab").onclick=function(){go("habits")};
 document.getElementById("navAdd").onclick=function(){go("choice")};
+document.getElementById("navFr").onclick=function(){go("friends");if(AM.me){pushStats(true);loadFriends()}};
 function openM(){mSubj=SUBJ[0];drawChips();document.getElementById("mTitle").textContent=view==="hw"?"Nouveau devoir":"Nouvelle tâche";var i=document.getElementById("mInput");i.value="";document.getElementById("mEmoji").value="";document.getElementById("modal").classList.add("show");setTimeout(function(){i.focus()},50)}
 function drawChips(){var c=document.getElementById("mChips");c.style.display=view==="hw"?"flex":"none";c.innerHTML=SUBJ.map(function(s){return'<button data-ms="'+s+'" class="'+(s===mSubj?"on":"")+'">'+s+'</button>'}).join("")}
 function closeM(){document.getElementById("modal").classList.remove("show")}
@@ -243,8 +255,52 @@ m.addEventListener("pointermove",function(e){if(!D)return;D.nl=Math.max(D.min,Ma
 function end(e){if(!D)return;var d=D;D=null;var want=d.nl>(d.min+d.max)/2;if(e.type==="pointercancel")want=d.done;d.f.style.transition="left .15s";d.f.style.left=(want?d.max:d.min)+"px";d.p.style.transition="background .15s";d.p.style.background=mix(want?1:0);var id=d.p.dataset.id;setTimeout(function(){if(want!==d.done)toggle(id);else render()},160)}
 m.addEventListener("pointerup",end);m.addEventListener("pointercancel",end)})();
 document.addEventListener("input",function(e){if(e.target.id==="fEmoji"||e.target.id==="mEmoji"){var v=one(e.target.value);if(v!==e.target.value)e.target.value=v}});
-document.addEventListener("visibilitychange",function(){if(!document.hidden){if(view==="form")readForm();render()}});
+document.addEventListener("visibilitychange",function(){if(!document.hidden){if(view==="form")readForm();render();pushStats()}});
 setInterval(function(){if(ds(new Date())!==TD&&(view==="today"||view==="hw"||view==="habits"))render()},60000);
+
+var SB="https://tfwfkwstmglxbrrrtqro.supabase.co",SK="sb_publishable_VqAZJlsQ9llOdSEESH0_xQ_f9YkLWfH";
+var AM={ses:null,me:null,list:null,err:"",loading:false,step:"code",code:"",open:null,addOpen:false,addMsg:"",v:{}};
+try{AM.ses=JSON.parse(localStorage.getItem("sb-ses")||"null");AM.me=JSON.parse(localStorage.getItem("amis-me")||"null")}catch(e){}
+function errMsg(e){if(e instanceof TypeError)return"Pas de connexion internet";return /anonymous/i.test(e.message)?"Active « Allow anonymous sign-ins » dans Supabase":e.message}
+function sbFetch(path,opt,tok){opt=opt||{};opt.headers=Object.assign({apikey:SK,"Content-Type":"application/json"},tok?{Authorization:"Bearer "+tok}:{},opt.headers||{});return fetch(SB+path,opt).then(function(r){return r.text().then(function(t){var j=null;try{j=t?JSON.parse(t):null}catch(e){}if(!r.ok)throw new Error((j&&(j.msg||j.message||j.error_description||j.error))||("Erreur "+r.status));return j})})}
+function saveSes(s){AM.ses={access_token:s.access_token,refresh_token:s.refresh_token,expires_at:s.expires_at||Math.floor(Date.now()/1000)+(s.expires_in||3600),uid:(s.user&&s.user.id)||(AM.ses&&AM.ses.uid)};try{localStorage.setItem("sb-ses",JSON.stringify(AM.ses))}catch(e){}return AM.ses}
+function newSession(){return sbFetch("/auth/v1/signup",{method:"POST",body:JSON.stringify({data:{}})}).then(function(r){return saveSes(r).access_token})}
+function token(){var s=AM.ses;if(s&&s.expires_at-60>Date.now()/1000)return Promise.resolve(s.access_token);if(s&&s.refresh_token)return sbFetch("/auth/v1/token?grant_type=refresh_token",{method:"POST",body:JSON.stringify({refresh_token:s.refresh_token})}).then(function(r){return saveSes(r).access_token}).catch(function(e){if(AM.me||e instanceof TypeError)throw e;return newSession()});return newSession()}
+function rpc(fn,args){return token().then(function(t){return sbFetch("/rest/v1/rpc/"+fn,{method:"POST",body:JSON.stringify(args)},t)})}
+function sel(q){return token().then(function(t){return sbFetch("/rest/v1/"+q,{method:"GET"},t)})}
+function weekStart(){var d=new Date();d.setDate(d.getDate()-d.getDay());return ds(d)}
+function hwNow(){var ts=tasks("homework"),d=S.done[TD]||[];return{n:ts.filter(function(x){return isDone(x,d)}).length,t:ts.length}}
+function recordHist(){var h=hwNow(),o=S.hist[TD];if(!o||o.n!==h.n||o.t!==h.t){S.hist[TD]={n:h.n,t:h.t};var cut=ds(new Date(Date.now()-14*864e5));for(var z in S.hist)if(z<cut)delete S.hist[z];save()}}
+function calcStats(){recordHist();var h=hwNow(),ws=weekStart(),sum=0,c=0;for(var k in S.hist){var o=S.hist[k];if(k>=ws&&o.t>0){sum+=o.n*100/o.t;c++}}return{day:h.t?Math.round(h.n*100/h.t):null,week:c?Math.round(sum/c):null}}
+var pushT=null;
+function pushStats(now){if(!AM.me)return;clearTimeout(pushT);pushT=setTimeout(doPush,now?0:2500)}
+function doPush(){var s=calcStats();token().then(function(t){return sbFetch("/rest/v1/stats?on_conflict=user_id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({user_id:AM.ses.uid,day:TD,day_pct:s.day,week_pct:s.week,updated_at:new Date().toISOString()})},t)}).catch(function(){})}
+function loadFriends(){AM.loading=true;AM.err="";render();return Promise.all([sel("profiles?select=id,username"),sel("stats?select=user_id,day,day_pct,week_pct")]).then(function(r){var uid=AM.ses.uid;AM.list=r[0].filter(function(p){return p.id!==uid}).map(function(p){var st=r[1].filter(function(s){return s.user_id===p.id})[0]||{};return{id:p.id,name:p.username,day:st.day,dp:st.day_pct,wp:st.week_pct}});AM.loading=false;render()}).catch(function(e){AM.loading=false;AM.err=errMsg(e);render()})}
+function barRow(l,p){var v=(p===null||p===undefined)?null:p;return'<div class="cmp"><span>'+esc(l)+'</span><div class="bar2"><i style="width:'+(v||0)+'%"></i></div><b>'+(v===null?"—":v+"%")+'</b></div>'}
+function friendsHtml(){
+ var v=AM.v,h="";
+ if(!AM.me){
+  if(AM.step==="code"){h+='<div class="sec" style="text-align:center"><div style="font-size:3rem">🔒</div><h3 style="justify-content:center">Entre le code</h3><input class="txt" id="amCode" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Code" value="'+esc(v.amCode||"")+'" style="text-align:center"><div class="err">'+esc(AM.err)+'</div><button class="big" id="amCodeOk">Continuer</button></div>'}
+  else{h+='<div class="sec" style="text-align:center"><div style="font-size:3rem">👋</div><h3 style="justify-content:center">Choisis ton nom d’utilisateur</h3><input class="txt" id="amName" maxlength="20" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Ex. : Théo" value="'+esc(v.amName||"")+'" style="text-align:center"><div class="note">Tes amis t’ajouteront avec ce nom. Tu ne le choisis qu’une fois.</div><div class="err">'+esc(AM.err)+'</div><button class="big" id="amJoin">Entrer</button></div>'}
+  return h}
+ h+='<button class="opt" id="amAddBtn">➕ Ajouter un ami</button>';
+ if(AM.addOpen)h+='<div class="sec"><input class="txt" id="amAdd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Nom d’utilisateur de ton ami" value="'+esc(v.amAdd||"")+'"><div class="note">'+esc(AM.addMsg)+'</div><button class="big" id="amAddOk">Ajouter</button></div>';
+ h+='<div class="h2s" style="font-size:1.4rem;margin-top:8px">Mes amis <button class="edit" id="amRef" aria-label="Actualiser">↻</button></div>';
+ if(AM.loading)h+='<div class="empty" style="margin:10px 0">Chargement…</div>';
+ else if(AM.err)h+='<div class="err" style="text-align:center">'+esc(AM.err)+'</div>';
+ else if(!AM.list||!AM.list.length)h+='<div class="empty" style="margin:10px 0">Aucun ami pour l’instant.</div>';
+ else{var me=calcStats(),ws=weekStart();h+=AM.list.map(function(f){var o=AM.open===f.id,dv=f.day===TD?f.dp:null,wv=(f.day&&f.day>=ws)?f.wp:null;return'<div class="card" data-fr="'+f.id+'"><div class="top" style="margin-bottom:'+(o?"12px":"0")+'"><div>👤 '+esc(f.name)+'</div><span>'+(o?"⌃":"⌄")+'</span></div>'+(o?'<b>Aujourd’hui</b>'+barRow(f.name,dv)+barRow("Toi",me.day)+'<b>Cette semaine</b>'+barRow(f.name,wv)+barRow("Toi",me.week):'')+'</div>'}).join("")}
+ h+='<div class="note" style="text-align:center">Connecté en tant que '+esc(AM.me.name)+'</div>';
+ return h}
+function friendsClick(e){var g=function(s){return e.target.closest(s)},x;
+ if(g("#amCodeOk")){var c=(AM.v.amCode||"").trim();if(!c)return;AM.err="Un instant…";render();rpc("check_code",{p_code:c}).then(function(ok){if(ok===true){AM.code=c;AM.step="name";AM.err=""}else AM.err="Code incorrect";render()}).catch(function(er){AM.err=errMsg(er);render()});return}
+ if(g("#amJoin")){var n=(AM.v.amName||"").trim();if(n.length<2){AM.err="Nom trop court";render();return}AM.err="Un instant…";render();rpc("join_group",{p_code:AM.code,p_username:n}).then(function(r){if(r==="ok"){AM.me={name:n};try{localStorage.setItem("amis-me",JSON.stringify(AM.me))}catch(e){}AM.err="";pushStats(true);loadFriends()}else{AM.err=r==="name_taken"?"Ce nom est déjà pris":r==="bad_code"?"Code incorrect":"Impossible de continuer";if(r==="bad_code")AM.step="code";render()}}).catch(function(er){AM.err=errMsg(er);render()});return}
+ if(g("#amAddBtn")){AM.addOpen=!AM.addOpen;AM.addMsg="";render();return}
+ if(g("#amAddOk")){var nm=(AM.v.amAdd||"").trim();if(!nm)return;AM.addMsg="Un instant…";render();rpc("add_friend",{p_username:nm}).then(function(r){if(r==="ok"){AM.addMsg="✓ Ami ajouté";AM.v.amAdd="";loadFriends()}else{AM.addMsg=r==="not_found"?"Aucun utilisateur avec ce nom":r==="self"?"C’est ton propre nom":"Impossible d’ajouter";render()}}).catch(function(er){AM.addMsg=errMsg(er);render()});return}
+ if(x=g("[data-fr]")){AM.open=AM.open===x.dataset.fr?null:x.dataset.fr;render();return}
+ if(g("#amRef")){loadFriends();return}}
+document.addEventListener("input",function(e){if(["amCode","amName","amAdd"].indexOf(e.target.id)>-1)AM.v[e.target.id]=e.target.value});
+if(AM.me)pushStats();
 try{if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(function(){})}catch(e){}
 render();
 </script>
